@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>小学生识字助手</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #3B82F6;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-500: #6B7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding-bottom: 70px;
+    }
+    .header {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 14px 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 {
+      font-size: 18px;
+      color: var(--gray-900);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--primary), #8B5CF6);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 18px;
+    }
+    .ai-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--success);
+      font-weight: 500;
+    }
+    .ai-indicator.offline {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--warning);
+    }
+    .ai-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    .ai-indicator.offline .ai-dot {
+      background: var(--warning);
+      animation: none;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    /* Chat Container */
+    .chat-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* Char Input Card */
+    .input-card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      margin-bottom: 16px;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .char-input {
+      width: 70px;
+      height: 70px;
+      border: 3px solid var(--primary);
+      border-radius: 12px;
+      font-size: 36px;
+      text-align: center;
+      outline: none;
+      transition: all 0.3s;
+    }
+    .char-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    .search-btn {
+      flex: 1;
+      height: 70px;
+      background: linear-gradient(135deg, var(--primary), #8B5CF6);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .search-btn:active { transform: scale(0.98); }
+    .search-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .spinner-small {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Version Selector */
+    .version-selector {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .version-chip {
+      padding: 6px 12px;
+      border: 2px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: 13px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .version-chip.active {
+      border-color: var(--primary);
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--primary);
+    }
+
+    /* Quick Chips */
+    .quick-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    .quick-chip {
+      padding: 8px 14px;
+      background: var(--gray-100);
+      border: none;
+      border-radius: 20px;
+      font-size: 15px;
+      color: var(--gray-700);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .quick-chip:hover { background: var(--primary); color: white; }
+    .shuffle-btn {
+      padding: 8px 14px;
+      background: linear-gradient(135deg, var(--warning), #F97316);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .shuffle-btn:active { transform: scale(0.95); }
+
+    /* Chat Messages */
+    .chat-messages {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .message {
+      padding: 16px;
+      display: flex;
+      gap: 12px;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .message.user { background: rgba(59, 130, 246, 0.05); }
+    .message.assistant { background: white; }
+    .message-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .message.user .message-avatar {
+      background: linear-gradient(135deg, var(--primary), #8B5CF6);
+      color: white;
+    }
+    .message.assistant .message-avatar {
+      background: linear-gradient(135deg, var(--success), #059669);
+      color: white;
+    }
+    .message-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .message-sender {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .message-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--gray-900);
+      word-break: break-word;
+    }
+    .message-text p { margin-bottom: 8px; }
+    .message-text p:last-child { margin-bottom: 0; }
+    .message-text ul, .message-text ol {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    .message-text li { margin-bottom: 4px; }
+    .message-text code {
+      background: var(--gray-100);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 8px 0;
+    }
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--gray-400);
+      border-radius: 50%;
+      animation: typing 1.4s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing {
+      0%, 100% { transform: translateY(0); opacity: 0.4; }
+      50% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    /* Char Info Card */
+    .char-info-card {
+      background: linear-gradient(135deg, var(--primary), #8B5CF6);
+      border-radius: 16px;
+      padding: 24px;
+      color: white;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      animation: fadeIn 0.3s ease;
+    }
+    .char-main {
+      font-size: 80px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+    .char-meta {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      font-size: 15px;
+      opacity: 0.95;
+      flex-wrap: wrap;
+    }
+    .char-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Info Cards */
+    .info-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .info-card {
+      background: white;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    }
+    .info-card.full { grid-column: span 2; }
+    .info-label {
+      font-size: 11px;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .info-value {
+      font-size: 15px;
+      color: var(--gray-900);
+      font-weight: 500;
+    }
+    .info-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: white;
+    }
+    .info-badge.type-1 { background: linear-gradient(135deg, #3B82F6, #2563EB); }
+    .info-badge.type-2 { background: linear-gradient(135deg, #10B981, #059669); }
+    .word-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .word-tag {
+      padding: 4px 12px;
+      background: var(--gray-100);
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--gray-700);
+    }
+    .exam-card {
+      background: #FEF3C7;
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .exam-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #92400E;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .exam-item {
+      font-size: 13px;
+      color: #78350F;
+      margin-bottom: 6px;
+      padding-left: 14px;
+      position: relative;
+    }
+    .exam-item::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: #D97706;
+    }
+
+    /* Lesson List */
+    .lesson-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .lesson-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: var(--gray-100);
+      border-radius: 10px;
+      align-items: flex-start;
+    }
+    .lesson-level {
+      flex-shrink: 0;
+      padding-top: 4px;
+    }
+    .level-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: block;
+    }
+    .level-dot.type-1 {
+      background: var(--danger);
+    }
+    .level-dot.type-2 {
+      background: var(--warning);
+    }
+    .lesson-content {
+      flex: 1;
+    }
+    .lesson-title {
+      font-size: 14px;
+      color: var(--gray-900);
+      font-weight: 500;
+    }
+    .lesson-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+    .lesson-note {
+      font-size: 12px;
+      color: var(--gray-500);
+    }
+    .info-badge.small {
+      font-size: 11px;
+      padding: 2px 6px;
+    }
+
+    /* Lesson Example */
+    .lesson-example {
+      margin-top: 8px;
+    }
+    .lesson-header {
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .lesson-requirement {
+      font-size: 13px;
+      color: var(--gray-600);
+      margin-bottom: 8px;
+    }
+    .lesson-quote {
+      background: rgba(255, 255, 255, 0.7);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--gray-800);
+    }
+    .quote-mark {
+      color: var(--gray-400);
+      font-size: 18px;
+    }
+
+    /* Chat Input */
+    .chat-input-area {
+      background: white;
+      border-radius: 16px;
+      padding: 12px 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .chat-input {
+      flex: 1;
+      border: 2px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 15px;
+      resize: none;
+      max-height: 120px;
+      outline: none;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .chat-input:focus { border-color: var(--primary); }
+    .send-btn {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary), #8B5CF6);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: all 0.2s;
+    }
+    .send-btn:active { transform: scale(0.95); }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Prompt Suggestions */
+    .prompt-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .prompt-chip {
+      padding: 8px 14px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 20px;
+      font-size: 13px;
+      color: var(--primary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .prompt-chip:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray-500);
+    }
+    .empty-icon { font-size: 64px; margin-bottom: 16px; }
+    .empty-text { font-size: 16px; }
+
+    /* Bottom Nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--gray-500);
+      font-size: 11px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .nav-item.active { color: var(--primary); }
+    .nav-icon { font-size: 22px; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: flex-end;
+      z-index: 200;
+    }
+    .modal-content {
+      background: white;
+      width: 100%;
+      max-height: 85vh;
+      border-radius: 20px 20px 0 0;
+      padding: 20px;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-title { font-size: 18px; font-weight: 600; }
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--gray-100);
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <h1>
+        <span class="header-icon">字</span>
+        小学生识字助手
+      </h1>
+      <div class="ai-indicator" :class="{ offline: !aiMode || !apiKey }">
+        <span class="ai-dot"></span>
+        {{ aiMode && apiKey ? 'AI 在线' : '模拟模式' }}
+      </div>
+    </header>
+
+    <div class="chat-container">
+      <!-- Char Input -->
+      <div class="input-card">
+        <div class="input-row">
+          <input
+            type="text"
+            class="char-input"
+            v-model="searchChar"
+            @keyup.enter="search"
+            @input="onInput"
+            maxlength="1"
+            placeholder="字"
+          >
+          <button class="search-btn" @click="search" :disabled="!searchChar">
+            <span v-if="loading" class="spinner-small"></span>
+            <span v-else>🔍 查询</span>
+          </button>
+        </div>
+
+        <div class="version-selector">
+          <button class="version-chip" :class="{ active: selectedVersion === 'renshu' }" @click="selectedVersion = 'renshu'">人教版</button>
+          <button class="version-chip" :class="{ active: selectedVersion === 'sujiao' }" @click="selectedVersion = 'sujiao'">苏教版</button>
+          <button class="version-chip" :class="{ active: selectedVersion === 'yuwen' }" @click="selectedVersion = 'yuwen'">语文S版</button>
+        </div>
+
+        <div class="quick-chips">
+          <button class="quick-chip" v-for="char in randomChars" :key="char.id" @click="quickSearch(char.text)">
+            {{ char.text }}
+          </button>
+          <button class="shuffle-btn" @click="shuffleChars">
+            🔄 换一换
+          </button>
+        </div>
+      </div>
+
+      <!-- Char Info (when result exists) -->
+      <div class="char-info-card" v-if="currentChar">
+        <div class="char-main">{{ currentChar }}</div>
+        <div class="char-meta">
+          <span>📖 {{ result?.pinyin || '—' }}</span>
+          <span>✏️ {{ result?.strokeCount || '?' }}画</span>
+          <span>🏠 {{ result?.radical || '?' }}部</span>
+          <span v-if="result?.grade">📚 {{ result.grade }}</span>
+        </div>
+      </div>
+
+      <!-- Info Cards -->
+      <div class="info-cards" v-if="result">
+        <!-- 一类字课文示例 -->
+        <div class="info-card full" v-if="result.type1Lesson" style="background: linear-gradient(135deg, #FEF2F2, #FEE2E2); border-left: 4px solid var(--danger);">
+          <div class="info-label" style="color: var(--danger);">🔴 一类字课文</div>
+          <div class="lesson-example">
+            <div class="lesson-header">
+              <strong>{{ result.type1Lesson.grade }}{{ result.type1Lesson.semester }}</strong>
+              {{ result.type1Lesson.lessonNum }}
+              <span style="color: var(--danger);">《{{ result.type1Lesson.lessonTitle }}》</span>
+            </div>
+            <div class="lesson-requirement">要求：{{ result.type1Lesson.levelDesc }}</div>
+            <div class="lesson-quote">
+              <span class="quote-mark">「</span>{{ result.type1Lesson.example }}<span class="quote-mark">」</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 二类字课文示例 -->
+        <div class="info-card full" v-if="result.type2Lesson" style="background: linear-gradient(135deg, #FFFBEB, #FEF3C7); border-left: 4px solid var(--warning);">
+          <div class="info-label" style="color: #B45309;">🟡 二类字课文</div>
+          <div class="lesson-example">
+            <div class="lesson-header">
+              <strong>{{ result.type2Lesson.grade }}{{ result.type2Lesson.semester }}</strong>
+              {{ result.type2Lesson.lessonNum }}
+              <span style="color: #B45309;">《{{ result.type2Lesson.lessonTitle }}》</span>
+            </div>
+            <div class="lesson-requirement">要求：{{ result.type2Lesson.levelDesc }}</div>
+            <div class="lesson-quote">
+              <span class="quote-mark">「</span>{{ result.type2Lesson.example }}<span class="quote-mark">」</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 基本信息 -->
+        <div class="info-card">
+          <div class="info-label">📝 基础信息</div>
+          <div style="display: flex; gap: 16px; font-size: 14px; color: var(--gray-700);">
+            <span>拼音：<strong>{{ result.pinyin }}</strong></span>
+            <span>笔画：<strong>{{ result.strokeCount }}画</strong></span>
+            <span>部首：<strong>{{ result.radical }}</strong></span>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-label">📚 适用教材</div>
+          <div class="info-value">{{ result.textbook }}（{{ result.version }}）</div>
+        </div>
+
+        <div class="info-card full">
+          <div class="info-label">🔤 常见组词</div>
+          <div class="word-tags">
+            <span class="word-tag" v-for="word in result.words" :key="word">{{ word }}</span>
+          </div>
+        </div>
+
+        <div class="exam-card" v-if="result.examPoints?.length">
+          <div class="exam-title">📝 考试考点</div>
+          <div class="exam-item" v-for="point in result.examPoints" :key="point">{{ point }}</div>
+        </div>
+
+        <div class="info-card full" v-if="result.tip" style="background: #FEE2E2;">
+          <div class="info-label" style="color: var(--danger);">⚠️ 易错提示</div>
+          <div class="info-value" style="color: var(--danger);">{{ result.tip }}</div>
+        </div>
+      </div>
+
+      <!-- Prompt Suggestions -->
+      <div class="prompt-suggestions" v-if="currentChar && !isTyping">
+        <div class="prompt-chip" v-for="prompt in promptSuggestions" :key="prompt" @click="sendPrompt(prompt)">
+          {{ prompt }}
+        </div>
+      </div>
+
+      <!-- Chat Messages -->
+      <div class="chat-messages" v-if="messages.length > 0">
+        <div
+          v-for="(msg, index) in messages"
+          :key="index"
+          class="message"
+          :class="msg.role"
+        >
+          <div class="message-avatar">
+            {{ msg.role === 'user' ? '👤' : '🤖' }}
+          </div>
+          <div class="message-content">
+            <div class="message-sender">{{ msg.role === 'user' ? '你' : 'AI 助手' }}</div>
+            <div class="message-text" v-html="formatMessage(msg.content)"></div>
+          </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="message assistant" v-if="isTyping">
+          <div class="message-avatar">🤖</div>
+          <div class="message-content">
+            <div class="message-sender">AI 助手</div>
+            <div class="typing-indicator">
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" v-if="!currentChar && !loading">
+        <div class="empty-icon">✏️</div>
+        <div class="empty-text">输入汉字开始学习，或向AI助手提问</div>
+      </div>
+
+      <!-- Chat Input -->
+      <div class="chat-input-area" v-if="currentChar">
+        <textarea
+          class="chat-input"
+          v-model="chatInput"
+          @keydown.enter.exact.prevent="sendMessage"
+          placeholder="你可以追问关于这个字的任何问题..."
+          rows="1"
+        ></textarea>
+        <button class="send-btn" @click="sendMessage" :disabled="!chatInput.trim() || isTyping">
+          ➤
+        </button>
+      </div>
+    </div>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active"><span class="nav-icon">🏠</span>首页</button>
+      <button class="nav-item"><span class="nav-icon">📜</span>历史</button>
+      <button class="nav-item"><span class="nav-icon">⭐</span>收藏</button>
+      <button class="nav-item"><span class="nav-icon">👤</span>我的</button>
+    </nav>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          searchChar: '',
+          currentChar: '',
+          selectedVersion: 'renshu',
+          result: null,
+          loading: false,
+          // Chat
+          messages: [],
+          chatInput: '',
+          isTyping: false,
+          conversationContext: [],
+          // Random chars
+          randomChars: [],
+          isShuffling: false,
+          // AI Config (通义千问)
+          aiMode: true,
+          apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+          apiKey: 'sk-595204789967458194730ebbc59e47ed',
+          modelName: 'qwen-turbo',
+          // Char pool
+          charPool: [
+            { text: '天', id: 1 }, { text: '地', id: 2 }, { text: '人', id: 3 }, { text: '大', id: 4 }, { text: '小', id: 5 },
+            { text: '学', id: 6 }, { text: '习', id: 7 }, { text: '爸', id: 8 }, { text: '妈', id: 9 }, { text: '爷', id: 10 },
+            { text: '日', id: 11 }, { text: '月', id: 12 }, { text: '水', id: 13 }, { text: '火', id: 14 }, { text: '山', id: 15 },
+            { text: '石', id: 16 }, { text: '田', id: 17 }, { text: '土', id: 18 }, { text: '风', id: 19 }, { text: '雨', id: 20 },
+            { text: '云', id: 21 }, { text: '雷', id: 22 }, { text: '电', id: 23 }, { text: '光', id: 24 }, { text: '花', id: 25 },
+            { text: '草', id: 26 }, { text: '树', id: 27 }, { text: '木', id: 28 }, { text: '林', id: 29 }, { text: '森', id: 30 },
+            { text: '鸟', id: 31 }, { text: '鱼', id: 32 }, { text: '虫', id: 33 }, { text: '马', id: 34 }, { text: '牛', id: 35 },
+            { text: '羊', id: 36 }, { text: '猪', id: 37 }, { text: '狗', id: 38 }, { text: '猫', id: 39 }, { text: '鸡', id: 40 },
+            { text: '红', id: 41 }, { text: '黄', id: 42 }, { text: '蓝', id: 43 }, { text: '绿', id: 44 }, { text: '白', id: 45 },
+            { text: '黑', id: 46 }, { text: '青', id: 47 }, { text: '国', id: 48 }, { text: '家', id: 49 }, { text: '中', id: 50 },
+            { text: '我', id: 51 }, { text: '你', id: 52 }, { text: '他', id: 53 }, { text: '她', id: 54 }, { text: '好', id: 55 },
+            { text: '的', id: 56 }, { text: '是', id: 57 }, { text: '不', id: 58 }, { text: '在', id: 59 }, { text: '有', id: 60 },
+            { text: '春', id: 61 }, { text: '夏', id: 62 }, { text: '秋', id: 63 }, { text: '冬', id: 64 }, { text: '年', id: 65 },
+            { text: '看', id: 66 }, { text: '听', id: 67 }, { text: '说', id: 68 }, { text: '读', id: 69 }, { text: '写', id: 70 },
+            { text: '明', id: 71 }, { text: '亮', id: 72 }, { text: '高', id: 73 }, { text: '长', id: 74 }, { text: '新', id: 75 },
+          ]
+        };
+      },
+      computed: {
+        promptSuggestions() {
+          if (!this.currentChar) return [];
+          return [
+            '给我讲讲这个字的故事',
+            '这个字怎么写笔顺？',
+            '有哪些含这个字的诗句？',
+            '这个字容易怎么写错？',
+          ];
+        }
+      },
+      mounted() {
+        // 默认启用通义千问 AI
+        this.shuffleChars();
+        this.shuffleChars();
+      },
+      methods: {
+        onInput(e) {
+          if (this.searchChar.length > 1) {
+            this.searchChar = this.searchChar[0];
+          }
+        },
+        quickSearch(char) {
+          this.searchChar = char;
+          this.search();
+        },
+        shuffleChars() {
+          const shuffled = [...this.charPool].sort(() => Math.random() - 0.5);
+          this.randomChars = shuffled.slice(0, 9);
+        },
+        async search() {
+          if (!this.searchChar) return;
+          this.loading = true;
+          this.currentChar = this.searchChar;
+          this.messages = [];
+          this.conversationContext = [];
+          this.result = null;
+
+          try {
+            if (this.aiMode && this.apiKey) {
+              await this.searchWithAI();
+            } else {
+              await this.searchWithMock();
+            }
+          } catch (error) {
+            console.error('Search error:', error);
+            await this.searchWithMock();
+          }
+
+          this.loading = false;
+        },
+        async searchWithAI() {
+          const versionMap = {
+            'renshu': '人教版（人民教育出版社）',
+            'sujiao': '苏教版（江苏凤凰教育出版社）',
+            'yuwen': '语文S版（语文出版社）'
+          };
+          const version = versionMap[this.selectedVersion];
+
+          const systemPrompt = `你是一个专业的小学语文教学助手，专门帮助查询汉字在小学语文课本中的学习情况。
+
+【重要任务】
+查询汉字"${this.searchChar}"在小学语文课本中的学习情况：
+1. 找一个要求【一类字】的典型课文，并给出该字在课文中的原句例子
+2. 找一个要求【二类字】的典型课文，并给出该字在课文中的原句例子
+
+【一类字定义】
+会读、会写、会用——要求全面掌握：读准字音、认清字形、理解字义、规范书写、会口头和书面使用。
+
+【二类字定义】
+会读、会认——只要求在语言环境中能正确认读，正确流利朗读课文，不要求书写和书面使用。
+
+【返回格式】
+请严格按以下JSON格式返回（只返回JSON，不要其他任何文字）：
+{
+  "pinyin": "拼音",
+  "strokeCount": 数字,
+  "radical": "部首",
+  "textbook": "教材全称",
+  "version": "出版社名称",
+  "type1Lesson": {
+    "grade": "小学X年级",
+    "semester": "上册/下册",
+    "lessonNum": "第X课",
+    "lessonTitle": "课文标题",
+    "level": "1类字",
+    "levelDesc": "会读、会写、会用",
+    "example": "该字在课文中的原句"
+  },
+  "type2Lesson": {
+    "grade": "小学X年级",
+    "semester": "上册/下册",
+    "lessonNum": "第X课",
+    "lessonTitle": "课文标题",
+    "level": "2类字",
+    "levelDesc": "会读、会认",
+    "example": "该字在课文中的原句"
+  },
+  "words": ["词1", "词2", "词3", "词4", "词5"],
+  "examPoints": ["考点1", "考点2", "考点3"],
+  "tip": "易错提示"
+}
+
+【查询要求】
+- 请查找${version}小学语文教材
+- type1Lesson：找一个要求【一类字】的课文，给出该字的原文例句
+- type2Lesson：找一个要求【二类字】的课文，给出该字的原文例句
+- 例句必须是课文中实际包含该字的完整句子
+- 如果只能找到一个类型的课文，另一个填null`;
+
+          // Build messages with context
+          const messages = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `请查询汉字"${this.searchChar}"在${version}小学语文课本中的一类字和二类字课文例子，并给出课文中的原句。` }
+          ];
+
+          try {
+            const response = await this.callAI(messages);
+            let content = response.trim();
+            if (content.startsWith('```')) {
+              content = content.replace(/```json?|```/g, '').trim();
+            }
+            console.log('AI原始响应:', content);
+            const data = JSON.parse(content);
+
+            this.result = {
+              char: this.searchChar,
+              ...data,
+              levelClass: data.type1Lesson ? 'type-1' : 'type-2'
+            };
+
+            // 构建回复内容
+            let responseText = `🤖 通义千问查询结果：
+
+📖 汉字「${this.searchChar}」基本信息：
+• 拼音：${data.pinyin}
+• 笔画：${data.strokeCount}画
+• 部首：${data.radical}
+• 教材：${data.textbook}（${data.version}）
+
+`;
+
+            if (data.type1Lesson) {
+              responseText += `🔴 【一类字】课文示例：
+
+小学${data.type1Lesson.grade}${data.type1Lesson.semester}
+${data.type1Lesson.lessonNum}《${data.type1Lesson.lessonTitle}》
+要求：${data.type1Lesson.levelDesc}
+📝 课文原句：「${data.type1Lesson.example}」
+
+`;
+            }
+
+            if (data.type2Lesson) {
+              responseText += `🟡 【二类字】课文示例：
+
+小学${data.type2Lesson.grade}${data.type2Lesson.semester}
+${data.type2Lesson.lessonNum}《${data.type2Lesson.lessonTitle}》
+要求：${data.type2Lesson.levelDesc}
+📝 课文原句：「${data.type2Lesson.example}」
+
+`;
+            }
+
+            responseText += `上方已生成详细信息卡片，你可以继续追问关于这个字的问题！`;
+
+            this.messages.push({
+              role: 'assistant',
+              content: responseText
+            });
+
+          } catch (error) {
+            console.error('AI Error:', error);
+            this.messages.push({
+              role: 'assistant',
+              content: `⚠️ 通义千问暂时无法响应。错误信息：${error.message}`
+            });
+            await this.searchWithMock();
+          }
+        },
+        async callAI(messages) {
+          console.log('正在调用通义千问 API...');
+          const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`
+          };
+
+          const response = await fetch(this.apiUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+              model: this.modelName,
+              messages: messages,
+              temperature: 0.7
+            })
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API Error ${response.status}: ${errorText}`);
+          }
+
+          const data = await response.json();
+          console.log('通义千问响应成功');
+          return data.choices[0].message.content;
+        },
+        async searchWithMock() {
+          await new Promise(r => setTimeout(r, 600));
+
+          const versionMap = {
+            'renshu': { name: '义务教育教科书 语文', version: '人民教育出版社' },
+            'sujiao': { name: '义务教育教科书 语文', version: '江苏凤凰教育出版社' },
+            'yuwen': { name: '义务教育课程标准实验教科书', version: '语文出版社' }
+          };
+
+          const version = versionMap[this.selectedVersion];
+          const code = this.searchChar.charCodeAt(0);
+          const gradeNum = (code % 6) + 1;
+          const isShang = code % 2 === 0;
+
+          const lessonTitles = ['小小的船', '春天来了', '乌鸦喝水', '静夜思', '悯农', '咏鹅'];
+          const lessonNum = (code % 12) + 1;
+
+          // 一类字课文
+          const type1Lesson = {
+            grade: `小学${gradeNum}年级`,
+            semester: isShang ? '上册' : '下册',
+            lessonNum: `第${lessonNum}课`,
+            lessonTitle: lessonTitles[gradeNum - 1],
+            level: '1类字',
+            levelDesc: '会读、会写、会用',
+            example: `弯弯的月儿${this.searchChar}小小的船，小小的船儿两头尖。`
+          };
+
+          // 二类字课文（更高年级）
+          const type2Lesson = {
+            grade: `小学${Math.min(gradeNum + 1, 6)}年级`,
+            semester: isShang ? '下册' : '上册',
+            lessonNum: `第${(lessonNum % 10) + 1}课`,
+            lessonTitle: lessonTitles[(gradeNum + 2) % 6],
+            level: '2类字',
+            levelDesc: '会读、会认',
+            example: `床前明月光，疑是地上霜。举头望明月，低头思故乡。`
+          };
+
+          this.result = {
+            char: this.searchChar,
+            pinyin: this.getPinyin(this.searchChar),
+            strokeCount: (code % 15) + 1,
+            radical: this.getRadical(this.searchChar),
+            textbook: version.name,
+            version: version.version,
+            type1Lesson: type1Lesson,
+            type2Lesson: type2Lesson,
+            words: ['可以', '中国', '人民', '学习', '生活'],
+            examPoints: [
+              '正确读写该字，说出笔画顺序',
+              '能用该字正确组词',
+              '辨析该字在不同词语中的含义'
+            ],
+            tip: '注意笔画顺序，不要多写或少写笔画',
+            levelClass: isType1 ? 'type-1' : 'type-2'
+          };
+
+          this.messages.push({
+            role: 'assistant',
+            content: `（模拟数据）汉字「${this.searchChar}」首次出现在小学${gradeNum}年级${isShang ? '上' : '下'}册第${lessonNum}课《${lessonTitles[gradeNum - 1]}》中的【${isType1 ? '1类字' : '2类字'}】。上方已生成详细信息卡片，你可以继续追问关于这个字的问题！`
+          });
+        },
+        getPinyin(char) {
+          const pinyins = ['tiān', 'dì', 'rén', 'dà', 'xiǎo', 'xué', 'xí', 'bà', 'mā', 'shū'];
+          return pinyins[char.charCodeAt(0) % pinyins.length] || 'zhì';
+        },
+        getRadical(char) {
+          const radicals = ['一', '二', '人', '大', '小', '子', '女', '山', '水', '火'];
+          return radicals[char.charCodeAt(0) % radicals.length] || '扌';
+        },
+        sendPrompt(prompt) {
+          this.chatInput = prompt;
+          this.sendMessage();
+        },
+        async sendMessage() {
+          const text = this.chatInput.trim();
+          if (!text || this.isTyping) return;
+
+          // Add user message
+          this.messages.push({ role: 'user', content: text });
+          this.chatInput = '';
+          this.isTyping = true;
+
+          if (this.aiMode && this.apiKey) {
+            await this.chatWithAI(text);
+          } else {
+            await this.chatMock(text);
+          }
+
+          this.isTyping = false;
+        },
+        async chatWithAI(userMessage) {
+          const versionMap = {
+            'renshu': '人教版',
+            'sujiao': '苏教版',
+            'yuwen': '语文S版'
+          };
+
+          // 构建课文列表
+          let lessonInfo = '';
+          if (this.result?.appearances && this.result.appearances.length > 0) {
+            lessonInfo = this.result.appearances.map((app, i) =>
+              `${i + 1}. ${app.grade}${app.semester} ${app.lessonNum}《${app.lessonTitle}》- ${app.level}`
+            ).join('\n');
+          } else if (this.result?.firstAppearance) {
+            const fp = this.result.firstAppearance;
+            lessonInfo = `${fp.grade}${fp.semester} ${fp.lessonNum}《${fp.lessonTitle}》- ${fp.level}`;
+          } else {
+            lessonInfo = '暂无数据';
+          }
+
+          const systemPrompt = `你是一个专业的小学语文教学助手，正在帮助用户学习汉字「${this.currentChar}」。
+
+当前汉字信息：
+- 拼音：${this.result?.pinyin || '未知'}
+- 笔画：${this.result?.strokeCount || '未知'}画
+- 部首：${this.result?.radical || '未知'}
+- 教材：${this.result?.textbook || '未知'}（${versionMap[this.selectedVersion]}）
+
+📖 该字的学习轨迹：
+${lessonInfo}
+
+【一类字】会读、会写、会用
+【二类字】会读、会认
+
+请用友好、易懂的方式回答用户的问题，适合小学生和家长理解。重点说明这个字在课文中的学习要求。如果不确定，可以适当延伸但要注明是补充内容。`;
+
+          const messages = [
+            { role: 'system', content: systemPrompt },
+            ...this.conversationContext,
+            { role: 'user', content: userMessage }
+          ];
+
+          try {
+            const response = await this.callAI(messages);
+            this.messages.push({ role: 'assistant', content: response });
+            this.conversationContext.push(
+              { role: 'user', content: userMessage },
+              { role: 'assistant', content: response }
+            );
+          } catch (error) {
+            console.error('Chat Error:', error);
+            this.messages.push({
+              role: 'assistant',
+              content: '抱歉，AI服务暂时不可用。请检查网络连接或API设置。'
+            });
+          }
+        },
+        async chatMock(userMessage) {
+          await new Promise(r => setTimeout(r, 500));
+
+          const responses = [
+            `关于「${this.currentChar}」这个字，这是一个${this.result?.level || '常见'}，在小学${this.result?.grade?.replace('小学', '') || '语文'}会学到。`,
+            `「${this.currentChar}」的笔画是${this.result?.strokeCount || '几'}画，写的时候要注意笔顺哦！`,
+            `这个字在${this.result?.lesson || '课文中'}会学到，是很重要的一个字呢！`,
+          ];
+
+          const response = responses[Math.floor(Math.random() * responses.length)];
+          this.messages.push({ role: 'assistant', content: response });
+        },
+        formatMessage(text) {
+          // Simple markdown-like formatting
+          return text
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            .replace(/- (.*)/g, '<br>• $1');
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
