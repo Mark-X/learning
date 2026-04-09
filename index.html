@@ -95,22 +95,25 @@
       padding: 16px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
       margin-bottom: 16px;
+      overflow: hidden;
     }
     .input-row {
       display: flex;
       gap: 10px;
       align-items: stretch;
+      width: 100%;
     }
     .char-input {
       flex: 1;
-      height: 80px;
+      height: 64px;
       border: 3px solid var(--primary);
       border-radius: 12px;
-      font-size: 36px;
+      font-size: 32px;
       text-align: center;
       outline: none;
       transition: all 0.3s;
       padding: 0;
+      min-width: 0;
     }
     .char-input:focus {
       border-color: var(--primary);
@@ -118,7 +121,7 @@
     }
     .search-btn {
       width: 90px;
-      height: 80px;
+      height: 64px;
       background: linear-gradient(135deg, var(--primary), #8B5CF6);
       color: white;
       border: none;
@@ -136,14 +139,17 @@
 
     /* 移动端适配 */
     @media (max-width: 400px) {
+      .input-card {
+        padding: 12px;
+      }
       .char-input {
-        height: 70px;
-        font-size: 32px;
+        height: 56px;
+        font-size: 28px;
       }
       .search-btn {
-        width: 80px;
-        height: 70px;
-        font-size: 14px;
+        width: 70px;
+        height: 56px;
+        font-size: 13px;
       }
       .input-row {
         gap: 8px;
